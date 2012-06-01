@@ -253,8 +253,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def validate_name #:nodoc:
-        errors.add :first_name, :empty      if @first_name.blank?
-        errors.add :last_name,  :empty      if @last_name.blank?
+        errors.add :name,  :required      if @first_name.blank? && @last_name.blank?
       end
 
       def validate_expiration_date #:nodoc:
