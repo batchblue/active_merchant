@@ -8,7 +8,7 @@ module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
     # TO USE:
     # First, make sure you have everything setup correctly and all of your dependencies in place with:
-    # 
+    #
     #   require 'rubygems'
     #   require 'active_merchant'
     #
@@ -19,10 +19,10 @@ module ActiveMerchant #:nodoc:
     # Next, create a credit card object using a TC approved test card.
     #
     #   creditcard = ActiveMerchant::Billing::CreditCard.new(
-    #	    :number => '4111111111111111',
-    #	    :month => 8,
-    #	    :year => 2006,
-    #	    :first_name => 'Longbob',
+    #     :number => '4111111111111111',
+    #     :month => 8,
+    #     :year => 2006,
+    #     :first_name => 'Longbob',
     #     :last_name => 'Longsen'
     #   )
     #
@@ -79,7 +79,7 @@ module ActiveMerchant #:nodoc:
         "carderror"     => "Card number is invalid",
         "authexpired"   => "Attempt to postauth an expired (more than 14 days old) preauth",
         "fraud"         => "CrediGuard fraud score was below requested threshold",
-        "blacklist"     => "CrediGuard blacklist value was triggered", 
+        "blacklist"     => "CrediGuard blacklist value was triggered",
         "velocity"      => "CrediGuard velocity control value was triggered",
         "dailylimit"    => "Daily limit in transaction count or amount as been reached",
         "weeklylimit"   => "Weekly limit in transaction count or amount as been reached",
@@ -116,10 +116,10 @@ module ActiveMerchant #:nodoc:
       end
 
       # Creates a new TrustCommerceGateway
-      # 
+      #
       # The gateway requires that a valid login and password be passed
       # in the +options+ hash.
-      # 
+      #
       # ==== Options
       #
       # * <tt>:login</tt> -- The TrustCommerce account login.
@@ -164,7 +164,7 @@ module ActiveMerchant #:nodoc:
 
       # purchase() is a simple sale. This is one of the most common types of transactions, and is extremely simple. All that you need
       # to process a purchase are an amount in cents or a money object and a creditcard object or billingid string.
-      def purchase(money, creditcard_or_billing_id, options = {})        
+      def purchase(money, creditcard_or_billing_id, options = {})
         parameters = {
           :amount => amount(money),
         }
@@ -190,7 +190,7 @@ module ActiveMerchant #:nodoc:
 
       # refund() allows you to return money to a card that was previously billed. You need to supply the amount, in cents or a money object,
       # that you want to refund, and a TC transid for the transaction that you are refunding.
-      def refund(money, identification, options = {})  
+      def refund(money, identification, options = {})
         parameters = {
           :amount => amount(money),
           :transid => identification
@@ -199,23 +199,23 @@ module ActiveMerchant #:nodoc:
         commit('credit', parameters)
       end
 
-      def credit(money, identification, options = {})  
+      def credit(money, identification, options = {})
         deprecated CREDIT_DEPRECATION_MESSAGE
         refund(money, identification, options)
       end
 
       # void() clears an existing authorization and releases the reserved fund
-      # s back to the cardholder. The TC API refers to this transaction as a 
-      # reversal. After voiding, you will no longer be able to capture funds 
-      # from this authorization. TrustCommerce seems to always return a status 
-      # of "accepted" even if the transid you are trying to deauthorize has 
-      # already been captured. Note: Your account needs to be configured by 
-      # TrustCommerce to allow for reversal transactions before you can use this 
-      # method. 
-      # 
-      # NOTE: AMEX preauth's cannot be reversed. If you want to clear it more 
-      # quickly than the automatic expiration (7-10 days), you will have to 
-      # capture it and then immediately issue a credit for the same amount 
+      # s back to the cardholder. The TC API refers to this transaction as a
+      # reversal. After voiding, you will no longer be able to capture funds
+      # from this authorization. TrustCommerce seems to always return a status
+      # of "accepted" even if the transid you are trying to deauthorize has
+      # already been captured. Note: Your account needs to be configured by
+      # TrustCommerce to allow for reversal transactions before you can use this
+      # method.
+      #
+      # NOTE: AMEX preauth's cannot be reversed. If you want to clear it more
+      # quickly than the automatic expiration (7-10 days), you will have to
+      # capture it and then immediately issue a credit for the same amount
       # which should clear the customers credit card with 48 hours according to
       # TC.
       def void(authorization, options = {})
@@ -231,13 +231,13 @@ module ActiveMerchant #:nodoc:
       #
       # Recurring billing uses the same TC action as a plain-vanilla 'store', but we have a separate method for clarity. It can be called
       # like store, with the addition of a required 'periodicity' parameter:
-      # 
+      #
       # The parameter :periodicity should be specified as either :bimonthly, :monthly, :biweekly, :weekly, :yearly or :daily
       #
       #   gateway.recurring(tendollar, creditcard, :periodicity => :weekly)
       #
       # You can optionally specify how long you want payments to continue using 'payments'
-      def recurring(money, creditcard_or_billing_id, options = {})        
+      def recurring(money, creditcard_or_billing_id, options = {})
         requires!(options, [:periodicity, :bimonthly, :monthly, :biweekly, :weekly, :yearly, :daily] )
 
         cycle = case options[:periodicity]
@@ -266,13 +266,13 @@ module ActiveMerchant #:nodoc:
         add_payment_source(parameters, creditcard_or_billing_id)
 
         commit('store', parameters)
-      end      
+      end
 
       # store() requires a TrustCommerce account that is activated for Citatdel. You can call it with a credit card and a billing ID
       # you would like to use to reference the stored credit card info for future captures. Use 'verify' to specify whether you want
       # to simply store the card in the DB, or you want TC to verify the data first.
 
-      def store(creditcard, options = {})   
+      def store(creditcard, options = {})
         parameters = {
           :verify => options[:verify] || 'y',
           :billingid => options[:billingid] || options[:billing_id] || nil,
@@ -325,7 +325,7 @@ module ActiveMerchant #:nodoc:
       def add_creditcard(params, creditcard)
         params[:media]     = "cc"
         params[:name]      = creditcard.name
-        params[:cc]        = creditcard.number      
+        params[:cc]        = creditcard.number
         params[:exp]       = expdate(creditcard)
         params[:cvv]       = creditcard.verification_value if creditcard.verification_value?
       end
@@ -346,7 +346,7 @@ module ActiveMerchant #:nodoc:
       def add_addresses(params, options)
         address = options[:billing_address] || options[:address]
 
-        if address          
+        if address
           params[:address1]  = address[:address1] unless address[:address1].blank?
           params[:address2]  = address[:address2] unless address[:address2].blank?
           params[:city]      = address[:city]     unless address[:city].blank?
@@ -362,7 +362,7 @@ module ActiveMerchant #:nodoc:
           params[:shipto_address2] = shipping_address[:address2] unless shipping_address[:address2].blank?
           params[:shipto_city]     = shipping_address[:city]     unless shipping_address[:city].blank?
           params[:shipto_state]    = shipping_address[:state]    unless shipping_address[:state].blank?
-          params[:shipto_zip]	     = shipping_address[:zip]      unless shipping_address[:zip].blank?
+          params[:shipto_zip]      = shipping_address[:zip]      unless shipping_address[:zip].blank?
           params[:shipto_country]  = shipping_address[:country]  unless shipping_address[:country].blank?
         end
       end
@@ -400,12 +400,12 @@ module ActiveMerchant #:nodoc:
         # to be considered successful, transaction status must be either "approved" or "accepted"
         success = SUCCESS_TYPES.include?(data["status"])
         message = message_from(data)
-        Response.new(success, message, data, 
-          :test => test?, 
-          :authorization => data["transid"],
-          :cvv_result => data["cvv"],
-          :avs_result => { :code => data["avs"] }
-        )
+        Response.new(success, message, data,
+                     :test => test?,
+                     :authorization => data["transid"],
+                     :cvv_result => data["cvv"],
+                     :avs_result => { :code => data["avs"] }
+                     )
       end
 
       def query(action, parameters)
@@ -464,7 +464,7 @@ module ActiveMerchant #:nodoc:
 
       def message_from(data)
         status = case data["status"]
-        when "decline" 
+        when "decline"
           return DECLINE_CODES[data["declinetype"]]
         when "baddata"
           return BADDATA_CODES[data["error"]]
