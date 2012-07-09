@@ -302,6 +302,14 @@ module ActiveMerchant #:nodoc:
         query('billingid', parameters)
       end
 
+      def disable_recurring_billing(billing_id)
+        parameters = {
+          :cycle => "null",
+          :billingid => billing_id
+        }
+        commit('store', parameters)
+      end
+
       private
       def format_time_for_request(time)
         time.strftime("%m-%d-%Y %R:%S")
