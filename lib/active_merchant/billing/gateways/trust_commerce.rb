@@ -65,7 +65,7 @@ module ActiveMerchant #:nodoc:
     # below and the rest of active_merchant's documentation, as well as Trust Commerce's user and developer documentation.
 
     class TrustCommerceGateway < Gateway
-      COMMIT_URL = 'https://vault.trustcommerce.com/trans/'
+      self.live_url = self.test_url = 'https://vault.trustcommerce.com/trans/'
       QUERY_URL = 'https://vault.trustcommerce.com/query/'
 
       SUCCESS_TYPES = ["approved", "accepted"]
@@ -132,7 +132,6 @@ module ActiveMerchant #:nodoc:
       def initialize(options = {})
         requires!(options, :login, :password)
 
-        @options = options
         super
       end
 
@@ -141,8 +140,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def test?
-        @options[:login] == TEST_LOGIN &&
-          @options[:password] == TEST_PASSWORD || @options[:test] || super
+        ((@options[:login] == TEST_LOGIN && @options[:password] == TEST_PASSWORD) || super)
       end
 
       # authorize() is the first half of the preauth(authorize)/postauth(capture) model. The TC API docs call this
@@ -200,7 +198,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def credit(money, identification, options = {})
-        deprecated CREDIT_DEPRECATION_MESSAGE
+        ActiveMerchant.deprecated CREDIT_DEPRECATION_MESSAGE
         refund(money, identification, options)
       end
 
@@ -238,6 +236,8 @@ module ActiveMerchant #:nodoc:
       #
       # You can optionally specify how long you want payments to continue using 'payments'
       def recurring(money, creditcard_or_billing_id, options = {})
+        ActiveMerchant.deprecated RECURRING_DEPRECATION_MESSAGE
+
         requires!(options, [:periodicity, :bimonthly, :monthly, :biweekly, :weekly, :yearly, :daily] )
 
         cycle = case options[:periodicity]
@@ -402,7 +402,7 @@ module ActiveMerchant #:nodoc:
         data = if tclink?
           TCLink.send(parameters)
         else
-          parse( ssl_post(COMMIT_URL, post_data(parameters)) )
+          parse( ssl_post(self.live_url, post_data(parameters)) )
         end
 
         # to be considered successful, transaction status must be either "approved" or "accepted"
@@ -471,7 +471,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def message_from(data)
-        status = case data["status"]
+        case data["status"]
         when "decline"
           return DECLINE_CODES[data["declinetype"]]
         when "baddata"

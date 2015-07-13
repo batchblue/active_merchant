@@ -6,10 +6,13 @@ module ActiveMerchant #:nodoc:
       API_VERSION = 'xml-4.2'
       PERIODIC_API_VERSION = 'spxml-3.0'
 
-      TEST_URL = 'https://www.securepay.com.au/test/payment'
-      LIVE_URL = 'https://www.securepay.com.au/xmlapi/payment'
-      TEST_PERIODIC_URL = "https://test.securepay.com.au/xmlapi/periodic"
-      LIVE_PERIODIC_URL = "https://api.securepay.com.au/xmlapi/periodic"
+      class_attribute :test_periodic_url, :live_periodic_url
+
+      self.test_url = 'https://api.securepay.com.au/test/payment'
+      self.live_url = 'https://api.securepay.com.au/xmlapi/payment'
+
+      self.test_periodic_url = 'https://test.securepay.com.au/xmlapi/periodic'
+      self.live_periodic_url = 'https://api.securepay.com.au/xmlapi/periodic'
 
       self.supported_countries = ['AU']
       self.supported_cardtypes = [:visa, :master, :american_express, :diners_club, :jcb]
@@ -55,16 +58,11 @@ module ActiveMerchant #:nodoc:
 
       def initialize(options = {})
         requires!(options, :login, :password)
-        @options = options
         super
       end
 
-      def test?
-        @options[:test] || super
-      end
-
       def purchase(money, credit_card_or_stored_id, options = {})
-        if credit_card_or_stored_id.is_a?(ActiveMerchant::Billing::CreditCard)
+        if credit_card_or_stored_id.respond_to?(:number)
           requires!(options, :order_id)
           commit :purchase, build_purchase_request(money, credit_card_or_stored_id, options)
         else
@@ -87,7 +85,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def credit(money, reference, options = {})
-        deprecated CREDIT_DEPRECATION_MESSAGE
+        ActiveMerchant.deprecated CREDIT_DEPRECATION_MESSAGE
         refund(money, reference)
       end
 
@@ -110,8 +108,10 @@ module ActiveMerchant #:nodoc:
       def build_purchase_request(money, credit_card, options)
         xml = Builder::XmlMarkup.new
 
-        xml.tag! 'amount', amount(money)
-        xml.tag! 'currency', options[:currency] || currency(money)
+        currency = options[:currency] || currency(money)
+
+        xml.tag! 'amount', localized_amount(money, currency)
+        xml.tag! 'currency', currency
         xml.tag! 'purchaseOrderNo', options[:order_id].to_s.gsub(/[ ']/, '')
 
         xml.tag! 'CreditCardInfo' do
@@ -126,7 +126,8 @@ module ActiveMerchant #:nodoc:
       def build_reference_request(money, reference)
         xml = Builder::XmlMarkup.new
 
-        transaction_id, order_id, preauth_id, original_amount = reference.split("*")
+        transaction_id, order_id, preauth_id, original_amount = reference.split('*')
+
         xml.tag! 'amount', (money ? amount(money) : original_amount)
         xml.tag! 'currency', options[:currency] || currency(money)
         xml.tag! 'txnID', transaction_id
@@ -141,7 +142,7 @@ module ActiveMerchant #:nodoc:
         xml.instruct!
         xml.tag! 'SecurePayMessage' do
           xml.tag! 'MessageInfo' do
-            xml.tag! 'messageID', ActiveMerchant::Utils.generate_unique_id.slice(0, 30)
+            xml.tag! 'messageID', SecureRandom.hex(15)
             xml.tag! 'messageTimestamp', generate_timestamp
             xml.tag! 'timeoutValue', request_timeout
             xml.tag! 'apiVersion', API_VERSION
@@ -168,7 +169,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def commit(action, request)
-        response = parse(ssl_post(test? ? TEST_URL : LIVE_URL, build_request(action, request)))
+        response = parse(ssl_post(test? ? self.test_url : self.live_url, build_request(action, request)))
 
         Response.new(success?(response), message_from(response), response,
           :test => test?,
@@ -200,7 +201,7 @@ module ActiveMerchant #:nodoc:
         xml.instruct!
         xml.tag! 'SecurePayMessage' do
           xml.tag! 'MessageInfo' do
-            xml.tag! 'messageID', ActiveMerchant::Utils.generate_unique_id.slice(0, 30)
+            xml.tag! 'messageID', SecureRandom.hex(15)
             xml.tag! 'messageTimestamp', generate_timestamp
             xml.tag! 'timeoutValue', request_timeout
             xml.tag! 'apiVersion', PERIODIC_API_VERSION
@@ -226,7 +227,7 @@ module ActiveMerchant #:nodoc:
       def commit_periodic(request)
         my_request = build_periodic_request(request)
         #puts my_request
-        response = parse(ssl_post(test? ? TEST_PERIODIC_URL : LIVE_PERIODIC_URL, my_request))
+        response = parse(ssl_post(test? ? self.test_periodic_url : self.live_periodic_url, my_request))
 
         Response.new(success?(response), message_from(response), response,
           :test => test?,

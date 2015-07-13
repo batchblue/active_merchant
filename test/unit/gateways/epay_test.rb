@@ -29,6 +29,15 @@ class EpayTest < Test::Unit::TestCase
                  response.message
   end
 
+  def test_invalid_characters_in_response
+    @gateway.expects(:raw_ssl_request).returns(invalid_authorize_response_with_invalid_characters)
+
+    assert response = @gateway.authorize(100, @credit_card)
+    assert_failure response
+    assert_equal 'The payment was declined of unknown reasons. For more information contact the bank. E.g. try with another credit card.<br />Denied - Call your bank for information',
+                 response.message
+  end
+
   def test_failed_response_on_purchase
     @gateway.expects(:raw_ssl_request).returns(Net::HTTPBadRequest.new(1.0, 400,'Bad Request'))
 
@@ -88,7 +97,7 @@ class EpayTest < Test::Unit::TestCase
 
   def test_deprecated_credit
     @gateway.expects(:soap_post).returns(REXML::Document.new(valid_refund_response))
-    assert_deprecation_warning(Gateway::CREDIT_DEPRECATION_MESSAGE, @gateway) do
+    assert_deprecation_warning(Gateway::CREDIT_DEPRECATION_MESSAGE) do
       assert_success @gateway.credit(100, '123')
     end
   end
@@ -96,15 +105,15 @@ class EpayTest < Test::Unit::TestCase
   def test_authorize_sends_order_number
     @gateway.expects(:raw_ssl_request).with(anything, anything, regexp_matches(/orderid=1234/), anything).returns(valid_authorize_response)
 
-    assert response = @gateway.authorize(100, '123', :order_id => '#1234')
+    @gateway.authorize(100, '123', :order_id => '#1234')
   end
-  
+
   def test_purchase_sends_order_number
     @gateway.expects(:raw_ssl_request).with(anything, anything, regexp_matches(/orderid=1234/), anything).returns(valid_authorize_response)
 
-    assert response = @gateway.purchase(100, '123', :order_id => '#1234')
+    @gateway.purchase(100, '123', :order_id => '#1234')
   end
-  
+
   private
 
   def valid_authorize_response
@@ -113,6 +122,10 @@ class EpayTest < Test::Unit::TestCase
 
   def invalid_authorize_response
     { 'Location' => 'https://ssl.ditonlinebetalingssystem.dk/auth/default.aspx?decline=1&error=102&errortext=The payment was declined. Try again in a moment or try with another credit card.' }
+  end
+
+  def invalid_authorize_response_with_invalid_characters
+    { 'Location' => 'https://ssl.ditonlinebetalingssystem.dk/auth/default.aspx?decline=1&error=209&errortext=The payment was declined of unknown reasons. For more information contact the bank. E.g. try with another credit card.<br />Denied - Call your bank for information' }
   end
 
   def valid_capture_response

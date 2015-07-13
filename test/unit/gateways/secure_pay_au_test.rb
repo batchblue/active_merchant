@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class SecurePayAuTest < Test::Unit::TestCase
+  include CommStub
+
   def setup
     @gateway = SecurePayAuGateway.new(
                  :login => 'login',
@@ -48,6 +50,20 @@ class SecurePayAuTest < Test::Unit::TestCase
     assert response.test?
   end
 
+  def test_localized_currency
+    stub_comms do
+      @gateway.purchase(100, @credit_card, @options.merge(:currency => 'CAD'))
+    end.check_request do |endpoint, data, headers|
+      assert_match %r{<amount>100<\/amount>}, data
+    end.respond_with(successful_purchase_response)
+
+    stub_comms do
+      @gateway.purchase(100, @credit_card, @options.merge(:currency => 'JPY'))
+    end.check_request do |endpoint, data, headers|
+      assert_match %r{<amount>1<\/amount>}, data
+    end.respond_with(successful_purchase_response)
+  end
+
   def test_failed_purchase
     @gateway.expects(:ssl_post).returns(failed_purchase_response)
 
@@ -56,6 +72,18 @@ class SecurePayAuTest < Test::Unit::TestCase
     assert_failure response
     assert response.test?
     assert_equal "CARD EXPIRED", response.message
+  end
+
+  def test_purchase_with_stored_id_calls_commit_periodic
+    @gateway.expects(:commit_periodic)
+
+    @gateway.purchase(@amount, "123", @options)
+  end
+
+  def test_purchase_with_creditcard_calls_commit_with_purchase
+    @gateway.expects(:commit).with(:purchase, anything)
+
+    @gateway.purchase(@amount, @credit_card, @options)
   end
 
   def test_successful_authorization
@@ -107,7 +135,7 @@ class SecurePayAuTest < Test::Unit::TestCase
   def test_deprecated_credit
     @gateway.expects(:ssl_post).returns(successful_refund_response)
 
-    assert_deprecation_warning(Gateway::CREDIT_DEPRECATION_MESSAGE, @gateway) do
+    assert_deprecation_warning(Gateway::CREDIT_DEPRECATION_MESSAGE) do
       assert_success @gateway.credit(@amount, "crazy*reference*thingy*100", {})
     end
   end
